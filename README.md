@@ -76,13 +76,6 @@ export SUPERENCRYPT_KEY="$(cat .superencrypt.key)"
 superencrypt decrypt --key "$SUPERENCRYPT_KEY"
 ```
 
-## Guidelines
-
-- Start with `scan` and review findings before encrypting.
-- Use `--file` when you want to target a single file (e.g., a Dockerfile or config).
-- Keep `.superencrypt.key` out of version control.
-- Prefer referencing secrets from env vars or secret managers instead of hardcoding them.
-
 ## Limitations
 
 - `superencrypt` uses pattern and heuristic matching. It focuses on raw literal values and may miss secrets that are:
