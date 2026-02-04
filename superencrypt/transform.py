@@ -6,7 +6,14 @@ from pathlib import Path
 from typing import Iterable, List
 
 from .crypto import Crypto, is_encrypted_value, wrap_encrypted, unwrap_encrypted
-from .scanner import SECRET_PATTERNS, SENSITIVE_KEYWORDS, _is_env_file, _is_binary
+from .scanner import (
+    SECRET_PATTERNS,
+    SENSITIVE_KEYWORDS,
+    _is_env_file,
+    _is_binary,
+    _is_probable_secret,
+    _is_terraform_reference,
+)
 
 
 @dataclass
@@ -36,6 +43,8 @@ def _encrypt_env_lines(text: str, crypto: Crypto) -> str:
             quote = raw_value[0]
             raw_value = raw_value[1:-1]
         if not SENSITIVE_KEYWORDS.search(key):
+            continue
+        if not _is_probable_secret(raw_value, key):
             continue
         if is_encrypted_value(raw_value):
             continue
@@ -78,7 +87,7 @@ def _decrypt_env_lines(text: str, crypto: Crypto) -> str:
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
-def _encrypt_generic(text: str, crypto: Crypto) -> str:
+def _encrypt_generic(text: str, crypto: Crypto, *, path: Path | None = None) -> str:
     changed = False
 
     def replacer(match: re.Match) -> str:
@@ -87,10 +96,23 @@ def _encrypt_generic(text: str, crypto: Crypto) -> str:
             inner = pattern.regex.search(match.group(0))
             if inner:
                 value = inner.group(pattern.group)
-                if is_encrypted_value(value):
+                raw_value = value
+                quote = ""
+                if raw_value.startswith(('"', "'")) and raw_value.endswith(('"', "'")):
+                    quote = raw_value[0]
+                    raw_value = raw_value[1:-1]
+                if is_encrypted_value(raw_value):
                     return match.group(0)
-                token = crypto.encrypt(value).token
-                replaced = match.group(0).replace(value, wrap_encrypted(token), 1)
+                if path is not None and path.suffix in {".tf", ".tfvars"}:
+                    if _is_terraform_reference(raw_value):
+                        return match.group(0)
+                if not _is_probable_secret(raw_value, match.group(0)):
+                    return match.group(0)
+                token = crypto.encrypt(raw_value).token
+                new_value = wrap_encrypted(token)
+                if quote:
+                    new_value = f"{quote}{new_value}{quote}"
+                replaced = match.group(0).replace(value, new_value, 1)
                 changed = True
                 return replaced
         return match.group(0)
@@ -121,7 +143,7 @@ def encrypt_file(path: Path, crypto: Crypto) -> TransformResult:
     if _is_env_file(path):
         new_text = _encrypt_env_lines(text, crypto)
     else:
-        new_text = _encrypt_generic(text, crypto)
+        new_text = _encrypt_generic(text, crypto, path=path)
     changed = new_text != text
     if changed:
         path.write_text(new_text, encoding="utf-8")

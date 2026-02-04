@@ -1,7 +1,7 @@
 # superencrypt
 https://pypi.org/project/superencryptx/0.1.0/
 
-CLI to scan a repo for secrets (including env files), encrypt them in-place, and decrypt them later using a key.
+CLI to scan a repo for secrets (including env files, Dockerfiles, compose files, and YAML/TOML/JSON/INI-style configs), encrypt them in-place, and decrypt them later using a key.
 
 ## Why
 
@@ -46,6 +46,13 @@ superencrypt decrypt --key-file .superencrypt.key
 
 # Scan only (no changes)
 superencrypt scan
+
+# Scan a single file
+superencrypt scan --file path/to/file
+
+# Encrypt/decrypt a single file
+superencrypt encrypt --file path/to/file
+superencrypt decrypt --file path/to/file --key-file .superencrypt.key
 ```
 
 ## Pipeline example

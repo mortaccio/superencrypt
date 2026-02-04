@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List
 
 from .crypto import Crypto
-from .scanner import scan_repo, iter_repo_files
+from .scanner import scan_repo, scan_path, iter_repo_files
 from .transform import encrypt_file, decrypt_file
 
 
@@ -26,8 +26,15 @@ def _write_key_file(path: Path, key: bytes) -> None:
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
-    root = Path(args.root).resolve()
-    findings = scan_repo(root)
+    if args.file:
+        path = Path(args.file).resolve()
+        if not path.exists():
+            raise SystemExit(f"File not found: {path}")
+        findings = scan_path(path)
+        root = path.parent
+    else:
+        root = Path(args.root).resolve()
+        findings = scan_repo(root)
     if not findings:
         print("No secrets found.")
         return 0
@@ -50,10 +57,18 @@ def cmd_encrypt(args: argparse.Namespace) -> int:
     crypto = Crypto(key)
 
     changed_files: List[Path] = []
-    for path in iter_repo_files(root):
+    if args.file:
+        path = Path(args.file).resolve()
+        if not path.exists():
+            raise SystemExit(f"File not found: {path}")
         result = encrypt_file(path, crypto)
         if result.changed:
             changed_files.append(result.path)
+    else:
+        for path in iter_repo_files(root):
+            result = encrypt_file(path, crypto)
+            if result.changed:
+                changed_files.append(result.path)
     if changed_files:
         print(f"Encrypted {len(changed_files)} files.")
     else:
@@ -67,10 +82,18 @@ def cmd_decrypt(args: argparse.Namespace) -> int:
     crypto = Crypto(key)
 
     changed_files: List[Path] = []
-    for path in iter_repo_files(root):
+    if args.file:
+        path = Path(args.file).resolve()
+        if not path.exists():
+            raise SystemExit(f"File not found: {path}")
         result = decrypt_file(path, crypto)
         if result.changed:
             changed_files.append(result.path)
+    else:
+        for path in iter_repo_files(root):
+            result = decrypt_file(path, crypto)
+            if result.changed:
+                changed_files.append(result.path)
     if changed_files:
         print(f"Decrypted {len(changed_files)} files.")
     else:
@@ -82,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="superencrypt")
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument("--root", default=".", help="Root directory to scan")
+    parent.add_argument("--file", help="Scan/encrypt/decrypt a single file")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
