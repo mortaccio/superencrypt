@@ -1,0 +1,39 @@
+[project]
+name = "superencrypt"
+version = "0.1.0"
+description = "Scan a repo for secrets and encrypt/decrypt them in-place."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Superencrypt Contributors" }]
+license = { file = "LICENSE" }
+keywords = ["secrets", "encryption", "git", "security", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Software Development :: Version Control",
+]
+dependencies = [
+  "cryptography>=41.0.0",
+]
+
+[project.scripts]
+superencrypt = "superencrypt.cli:main"
+
+[project.urls]
+Homepage = "https://example.com/superencrypt"
+Repository = "https://example.com/superencrypt"
+Issues = "https://example.com/superencrypt/issues"
+
+[build-system]
+requires = ["setuptools>=68.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
