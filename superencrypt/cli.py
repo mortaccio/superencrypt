@@ -80,19 +80,20 @@ def cmd_decrypt(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="superencrypt")
-    parser.add_argument("--root", default=".", help="Root directory to scan")
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument("--root", default=".", help="Root directory to scan")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    scan_parser = subparsers.add_parser("scan", help="Scan repo for secrets")
+    scan_parser = subparsers.add_parser("scan", help="Scan repo for secrets", parents=[parent])
     scan_parser.set_defaults(func=cmd_scan)
 
-    encrypt_parser = subparsers.add_parser("encrypt", help="Encrypt secrets in-place")
+    encrypt_parser = subparsers.add_parser("encrypt", help="Encrypt secrets in-place", parents=[parent])
     encrypt_parser.add_argument("--key", help="Base64 key string")
     encrypt_parser.add_argument("--key-file", help="Path to key file")
     encrypt_parser.set_defaults(func=cmd_encrypt)
 
-    decrypt_parser = subparsers.add_parser("decrypt", help="Decrypt secrets in-place")
+    decrypt_parser = subparsers.add_parser("decrypt", help="Decrypt secrets in-place", parents=[parent])
     decrypt_parser.add_argument("--key", help="Base64 key string")
     decrypt_parser.add_argument("--key-file", help="Path to key file")
     decrypt_parser.set_defaults(func=cmd_decrypt)

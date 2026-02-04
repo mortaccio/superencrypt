@@ -30,7 +30,9 @@ ENV_FILE_PATTERNS = (
 )
 
 SENSITIVE_KEYWORDS = re.compile(
-    r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|db[_-]?user|database[_-]?user)"
+    r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|"
+    r"db[_-]?user|database[_-]?user|user(name)?|login|host|hostname|url|endpoint|"
+    r"databricks[_-]?(host|token))"
 )
 
 
@@ -62,8 +64,10 @@ SECRET_PATTERNS: List[SecretPattern] = [
     ),
     SecretPattern(
         name="generic_assignment",
-        regex=re.compile(r"(?i)(password|passwd|secret|token|api[_-]?key)\s*[:=]\s*([\w\-./+=:@]+)"),
-        group=2,
+        regex=re.compile(
+            r"(?i)(password|passwd|secret|token|api[_-]?key|user(name)?|login|host|hostname|url|endpoint)\s*[:=]\s*([\w\-./+=:@]+)"
+        ),
+        group=3,
     ),
 ]
 
