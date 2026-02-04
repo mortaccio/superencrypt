@@ -62,6 +62,35 @@ export SUPERENCRYPT_KEY="$(cat .superencrypt.key)"
 superencrypt decrypt --key "$SUPERENCRYPT_KEY"
 ```
 
+## Key file usage
+
+```bash
+# Generate a key and write .superencrypt.key
+superencrypt encrypt
+
+# Use the key file to decrypt
+superencrypt decrypt --key-file .superencrypt.key
+
+# Load key into env and decrypt (CI/CD friendly)
+export SUPERENCRYPT_KEY="$(cat .superencrypt.key)"
+superencrypt decrypt --key "$SUPERENCRYPT_KEY"
+```
+
+## Guidelines
+
+- Start with `scan` and review findings before encrypting.
+- Use `--file` when you want to target a single file (e.g., a Dockerfile or config).
+- Keep `.superencrypt.key` out of version control.
+- Prefer referencing secrets from env vars or secret managers instead of hardcoding them.
+
+## Limitations
+
+- `superencrypt` uses pattern and heuristic matching. It focuses on raw literal values and may miss secrets that are:
+  - Generated or templated at runtime.
+  - Pulled from variables, references, or function calls.
+  - Hidden inside custom formats or encrypted blobs.
+- Always use defense-in-depth (secret managers, least privilege, CI checks).
+
 ## Notes
 
 - Encrypted values are stored as `ENC[<token>]`.
