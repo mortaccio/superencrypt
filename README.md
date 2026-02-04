@@ -1,5 +1,5 @@
 # superencrypt
-https://pypi.org/project/superencryptx/0.1.0/
+https://pypi.org/project/superencryptx/
 
 CLI to scan a repo for secrets (including env files, Dockerfiles, compose files, and YAML/TOML/JSON/INI-style configs), encrypt them in-place, and decrypt them later using a key.
 
@@ -98,7 +98,7 @@ superencrypt decrypt --key "$SUPERENCRYPT_KEY"
  - Use `scan` first to review matches.
 
 ## Development
-https://pypi.org/project/superencryptx/0.1.0/
+https://pypi.org/project/superencryptx/
 
 ```bash
 python -m venv .venv
