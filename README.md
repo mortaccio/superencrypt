@@ -1,4 +1,5 @@
 # superencrypt
+https://pypi.org/project/superencryptx/0.1.0/
 
 CLI to scan a repo for secrets (including env files), encrypt them in-place, and decrypt them later using a key.
 
