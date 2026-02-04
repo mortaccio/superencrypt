@@ -1,5 +1,5 @@
 [project]
-name = "superencrypt"
+name = "superencryptx"
 version = "0.1.0"
 description = "Scan a repo for secrets and encrypt/decrypt them in-place."
 readme = "README.md"

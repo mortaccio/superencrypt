@@ -9,19 +9,19 @@ CLI to scan a repo for secrets (including env files), encrypt them in-place, and
 ## Install
 
 ```bash
-pip install .
+pip install superencryptx
 ```
 
 ### No venv (recommended)
 
 ```bash
-pipx install .
+pipx install superencryptx
 ```
 
 ### System install (no venv)
 
 ```bash
-python3 -m pip install --user .
+python3 -m pip install --user superencryptx
 ```
 
 ## Quick start
