@@ -61,6 +61,7 @@ superencrypt decrypt --key "$SUPERENCRYPT_KEY"
  - Use `scan` first to review matches.
 
 ## Development
+https://pypi.org/project/superencryptx/0.1.0/
 
 ```bash
 python -m venv .venv
