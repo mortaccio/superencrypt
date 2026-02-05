@@ -44,6 +44,9 @@ superencrypt decrypt --key-file .superencrypt.key
 ## Usage
 
 ```bash
+# Show help
+superencrypt --help
+
 # Encrypt in-place (generates a key, prints it, and writes .superencrypt.key)
 superencrypt encrypt
 
@@ -52,6 +55,10 @@ superencrypt decrypt --key-file .superencrypt.key
 
 # Scan only (no changes)
 superencrypt scan
+
+# Scan output formats
+superencrypt scan --table
+superencrypt scan --json
 
 # Scan a single file
 superencrypt scan --file path/to/file
