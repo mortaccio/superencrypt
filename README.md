@@ -90,6 +90,17 @@ superencrypt decrypt --key "$SUPERENCRYPT_KEY"
   - Hidden inside custom formats or encrypted blobs.
 - Always use defense-in-depth (secret managers, least privilege, CI checks).
 
+## Recognized Tokens
+
+- AWS access keys and session tokens
+- GitHub tokens (`ghp_`, `gho_`, `ghs_`, `ghu_`, `github_pat_`)
+- Slack tokens (`xoxb-`, `xoxp-`, `xoxa-`, `xoxr-`, `xoxs-`)
+- Azure storage connection strings and SAS tokens
+- GCP API keys (`AIza...`) and OAuth tokens (`ya29...`)
+- JWTs
+- Database connection strings with embedded credentials
+- PEM private key headers (`BEGIN ... PRIVATE KEY`)
+
 ## Notes
 
 - Encrypted values are stored as `ENC[<token>]`.

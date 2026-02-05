@@ -9,6 +9,7 @@ from .crypto import Crypto, is_encrypted_value, wrap_encrypted, unwrap_encrypted
 from .scanner import (
     SECRET_PATTERNS,
     SENSITIVE_KEYWORDS,
+    HIGH_CONFIDENCE_PATTERNS,
     _is_env_file,
     _is_binary,
     _is_probable_secret,
@@ -106,8 +107,9 @@ def _encrypt_generic(text: str, crypto: Crypto, *, path: Path | None = None) -> 
                 if path is not None and path.suffix in {".tf", ".tfvars"}:
                     if _is_terraform_reference(raw_value):
                         return match.group(0)
-                if not _is_probable_secret(raw_value, match.group(0)):
-                    return match.group(0)
+                if pattern.name not in HIGH_CONFIDENCE_PATTERNS:
+                    if not _is_probable_secret(raw_value, match.group(0)):
+                        return match.group(0)
                 token = crypto.encrypt(raw_value).token
                 new_value = wrap_encrypted(token)
                 if quote:

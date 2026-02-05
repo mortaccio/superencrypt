@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import List
@@ -38,10 +39,57 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if not findings:
         print("No secrets found.")
         return 0
+    if args.json:
+        payload = [
+            {
+                "file": str(finding.path.relative_to(root)),
+                "line": finding.line_number,
+                "type": finding.key or "secret",
+                "value": finding.value,
+            }
+            for finding in findings
+        ]
+        print(json.dumps(payload, indent=2))
+        return 1
+    if args.table:
+        rows = [
+            (
+                str(finding.path.relative_to(root)),
+                str(finding.line_number),
+                finding.key or "secret",
+                finding.value,
+            )
+            for finding in findings
+        ]
+        headers = ("File", "Line", "Type", "Value")
+        widths = [
+            max(len(headers[i]), max(len(row[i]) for row in rows))
+            for i in range(len(headers))
+        ]
+        print(
+            f"{headers[0].ljust(widths[0])}  {headers[1].ljust(widths[1])}  "
+            f"{headers[2].ljust(widths[2])}  {headers[3]}"
+        )
+        print(
+            f"{'-' * widths[0]}  {'-' * widths[1]}  {'-' * widths[2]}  {'-' * max(5, widths[3])}"
+        )
+        for row in rows:
+            print(
+                f"{row[0].ljust(widths[0])}  {row[1].ljust(widths[1])}  "
+                f"{row[2].ljust(widths[2])}  {row[3]}"
+            )
+        print(f"\nFound {len(findings)} potential secrets.")
+        return 1
+    grouped: dict[str, list[tuple[int, str, str]]] = {}
     for finding in findings:
-        rel = finding.path.relative_to(root)
-        key = finding.key or "secret"
-        print(f"{rel}:{finding.line_number} {key}={finding.value}")
+        rel = str(finding.path.relative_to(root))
+        grouped.setdefault(rel, []).append(
+            (finding.line_number, finding.key or "secret", finding.value)
+        )
+    for rel in sorted(grouped.keys()):
+        print(rel)
+        for line_number, key, value in grouped[rel]:
+            print(f"  {line_number} {key}={value}")
     print(f"\nFound {len(findings)} potential secrets.")
     return 1
 
@@ -106,6 +154,8 @@ def build_parser() -> argparse.ArgumentParser:
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument("--root", default=".", help="Root directory to scan")
     parent.add_argument("--file", help="Scan/encrypt/decrypt a single file")
+    parent.add_argument("--json", action="store_true", help="JSON output for scan")
+    parent.add_argument("--table", action="store_true", help="Table output for scan")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 

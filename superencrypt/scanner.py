@@ -38,11 +38,15 @@ ENV_FILE_PATTERNS = (
 )
 
 SENSITIVE_KEYWORDS = re.compile(
-    r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret)"
+    r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|"
+    r"client[_-]?secret|access[_-]?token|refresh[_-]?token|session[_-]?token|bearer|auth[_-]?token|"
+    r"passphrase|private[_-]?key|ssh[_-]?key)"
 )
 
 NON_SECRET_HINTS = re.compile(
-    r"(?i)\b(password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret)\b"
+    r"(?i)\b(password|passwd|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|"
+    r"client[_-]?secret|access[_-]?token|refresh[_-]?token|session[_-]?token|bearer|auth[_-]?token|"
+    r"passphrase|private[_-]?key|ssh[_-]?key)\b"
 )
 
 URL_PATTERN = re.compile(r"(?i)^[a-z][a-z0-9+.-]*://")
@@ -57,7 +61,6 @@ TEMPLATE_PATTERN = re.compile(r"(\$\{[^}]+\}|\$\([^)]+\)|\$[A-Za-z_][A-Za-z0-9_]
 REFERENCE_TOKEN_PATTERN = re.compile(
     r"(?i)\b(var|local|data|module|path|terraform|each|count)\.[A-Za-z0-9_.-]+\b"
 )
-ARN_PATTERN = re.compile(r"^arn:aws:[a-z0-9-]+:[a-z0-9-]*:\d{0,12}:[^\\s]+$", re.IGNORECASE)
 TERRAFORM_REF_PATTERN = re.compile(
     r"(?i)^(?:var|local|data|module|path|terraform|each|count)\.[A-Za-z0-9_.-]+$"
 )
@@ -83,7 +86,7 @@ class SecretPattern:
 SECRET_PATTERNS: List[SecretPattern] = [
     SecretPattern(
         name="aws_access_key_id",
-        regex=re.compile(r"\b(AKIA[0-9A-Z]{16})\b"),
+        regex=re.compile(r"\b((?:AKIA|ASIA)[0-9A-Z]{16})\b"),
         group=1,
     ),
     SecretPattern(
@@ -92,10 +95,67 @@ SECRET_PATTERNS: List[SecretPattern] = [
         group=1,
     ),
     SecretPattern(
+        name="aws_session_token",
+        regex=re.compile(r"\b(AQoDYXdzE[A-Za-z0-9+/=]{20,})\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="github_token",
+        regex=re.compile(r"\b(gh[pous]_[A-Za-z0-9_]{36,255}|github_pat_[A-Za-z0-9_]{50,})\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="slack_token",
+        regex=re.compile(r"\b(xox[baprs]-[A-Za-z0-9-]{10,200})\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="azure_storage_connection_string",
+        regex=re.compile(
+            r"\b(DefaultEndpointsProtocol=https?;AccountName=[^;]+;AccountKey=[^;]+;EndpointSuffix=[^;\s]+)\b"
+        ),
+        group=1,
+    ),
+    SecretPattern(
+        name="azure_sas_token",
+        regex=re.compile(r"\b(sv=\d{4}-\d{2}-\d{2}[&;][^ \t\r\n]*?sig=[A-Za-z0-9%+/=]+[^\s]*)\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="gcp_api_key",
+        regex=re.compile(r"\b(AIza[0-9A-Za-z_-]{35})\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="gcp_oauth_token",
+        regex=re.compile(r"\b(ya29\.[0-9A-Za-z_-]{20,})\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="jwt_token",
+        regex=re.compile(r"\b(eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,})\b"),
+        group=1,
+    ),
+    SecretPattern(
+        name="private_key_pem",
+        regex=re.compile(r"(-----BEGIN [A-Z ]*PRIVATE KEY-----)"),
+        group=1,
+    ),
+    SecretPattern(
+        name="db_connection_string",
+        regex=re.compile(
+            r"\b((?:postgres|postgresql|mysql|mariadb|mongodb|redis|mssql|sqlserver)://[^ \t\r\n]+:[^ \t\r\n@]+@[^ \t\r\n/]+[^\s]*)\b",
+            re.IGNORECASE,
+        ),
+        group=1,
+    ),
+    SecretPattern(
         name="docker_env_or_arg",
         regex=re.compile(
             r"(?i)\b(?:ENV|ARG)\s+"
-            r"(?:[A-Z0-9_]*?(?:password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret)[A-Z0-9_]*)"
+            r"(?:[A-Z0-9_]*?(?:password|passwd|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|"
+            r"client[_-]?secret|access[_-]?token|refresh[_-]?token|session[_-]?token|bearer|auth[_-]?token|"
+            r"passphrase|private[_-]?key|ssh[_-]?key)[A-Z0-9_]*)"
             r"(?:\s*=\s*|\s+)"
             r"(\"[^\"]+\"|'[^']+'|[^\s#]+)"
         ),
@@ -104,11 +164,28 @@ SECRET_PATTERNS: List[SecretPattern] = [
     SecretPattern(
         name="generic_assignment",
         regex=re.compile(
-            r"(?i)(?:password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret)\s*[:=]\s*(\"[^\"]+\"|'[^']+'|[^\s#]+)"
+            r"(?i)(?:password|passwd|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|"
+            r"client[_-]?secret|access[_-]?token|refresh[_-]?token|session[_-]?token|bearer|auth[_-]?token|"
+            r"passphrase|private[_-]?key|ssh[_-]?key)\s*[:=]\s*(\"[^\"]+\"|'[^']+'|[^\s#]+)"
         ),
         group=1,
     ),
 ]
+
+HIGH_CONFIDENCE_PATTERNS = {
+    "aws_access_key_id",
+    "aws_secret_access_key",
+    "aws_session_token",
+    "github_token",
+    "slack_token",
+    "azure_storage_connection_string",
+    "azure_sas_token",
+    "gcp_api_key",
+    "gcp_oauth_token",
+    "jwt_token",
+    "private_key_pem",
+    "db_connection_string",
+}
 
 
 def _is_env_file(path: Path) -> bool:
@@ -151,8 +228,6 @@ def _is_probable_secret(value: str, context: str) -> bool:
     if REFERENCE_TOKEN_PATTERN.search(raw):
         return False
     if HOSTNAME_PATTERN.match(raw):
-        return False
-    if ARN_PATTERN.match(raw):
         return False
     if raw.startswith(("/", "./", "../")):
         return False
@@ -245,8 +320,9 @@ def scan_file_for_patterns(path: Path) -> List[Finding]:
                 continue
             if path.suffix in {".tf", ".tfvars"} and _is_terraform_reference(value):
                 continue
-            if not _is_probable_secret(value, match.group(0)):
-                continue
+            if pattern.name not in HIGH_CONFIDENCE_PATTERNS:
+                if not _is_probable_secret(value, match.group(0)):
+                    continue
             findings.append(Finding(path=path, line_number=idx, key=pattern.name, value=value))
     return findings
 
