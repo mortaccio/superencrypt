@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional
@@ -206,6 +207,33 @@ def _normalize_value(value: str) -> str:
     return raw
 
 
+def _shannon_entropy(value: str) -> float:
+    if not value:
+        return 0.0
+    freq: dict[str, int] = {}
+    for ch in value:
+        freq[ch] = freq.get(ch, 0) + 1
+    length = len(value)
+    entropy = 0.0
+    for count in freq.values():
+        p = count / length
+        entropy -= p * math.log2(p)
+    return entropy
+
+
+def _char_classes(value: str) -> int:
+    classes = 0
+    if re.search(r"[a-z]", value):
+        classes += 1
+    if re.search(r"[A-Z]", value):
+        classes += 1
+    if re.search(r"\d", value):
+        classes += 1
+    if re.search(r"[^A-Za-z0-9]", value):
+        classes += 1
+    return classes
+
+
 def _is_probable_secret(value: str, context: str) -> bool:
     raw = _normalize_value(value)
     if not raw:
@@ -237,6 +265,10 @@ def _is_probable_secret(value: str, context: str) -> bool:
     if has_secret_hint:
         if len(raw) < 6:
             return False
+        entropy = _shannon_entropy(raw)
+        classes = _char_classes(raw)
+        if entropy < 3.0 and classes < 2:
+            return False
     else:
         if len(raw) < 12:
             return False
@@ -244,11 +276,11 @@ def _is_probable_secret(value: str, context: str) -> bool:
             return False
         if re.fullmatch(r"[A-Za-z0-9._-]+", raw) and len(raw) < 16:
             return False
-        classes = sum(
-            bool(re.search(p, raw))
-            for p in (r"[a-z]", r"[A-Z]", r"\d", r"[^A-Za-z0-9]")
-        )
+        entropy = _shannon_entropy(raw)
+        classes = _char_classes(raw)
         if classes < 2:
+            return False
+        if entropy < 3.3:
             return False
     return True
 
