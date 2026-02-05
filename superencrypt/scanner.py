@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional
 
+from .crypto import is_encrypted_value
+
 
 SKIP_DIRS = {
     ".git",
@@ -220,6 +222,8 @@ def scan_env_file(path: Path) -> List[Finding]:
         key, value = stripped.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
+        if is_encrypted_value(value):
+            continue
         if SENSITIVE_KEYWORDS.search(key) and _is_probable_secret(value, key):
             findings.append(Finding(path=path, line_number=idx, key=key, value=value))
     return findings
@@ -237,6 +241,8 @@ def scan_file_for_patterns(path: Path) -> List[Finding]:
             if not match:
                 continue
             value = match.group(pattern.group)
+            if is_encrypted_value(_normalize_value(value)):
+                continue
             if path.suffix in {".tf", ".tfvars"} and _is_terraform_reference(value):
                 continue
             if not _is_probable_secret(value, match.group(0)):

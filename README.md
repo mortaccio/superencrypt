@@ -13,6 +13,12 @@ CLI to scan a repo for secrets (including env files, Dockerfiles, compose files,
 pip install superencryptx
 ```
 
+### uv (recommended)
+
+```bash
+uv tool install superencryptx
+```
+
 ### No venv (recommended)
 
 ```bash
