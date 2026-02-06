@@ -34,7 +34,7 @@ python3 -m pip install --user superencryptx
 ## Quick start
 
 ```bash
-# Encrypt in-place (generates a key, prints it, and writes .superencrypt.key)
+# Encrypt in-place (generates a key and writes .superencrypt.key)
 superencrypt encrypt
 
 # Decrypt in-place (use in CI/CD pipelines)
@@ -47,7 +47,7 @@ superencrypt decrypt --key-file .superencrypt.key
 # Show help
 superencrypt --help
 
-# Encrypt in-place (generates a key, prints it, and writes .superencrypt.key)
+# Encrypt in-place (generates a key and writes .superencrypt.key)
 superencrypt encrypt
 
 # Decrypt in-place (provide key or key file)
@@ -56,9 +56,10 @@ superencrypt decrypt --key-file .superencrypt.key
 # Scan only (no changes)
 superencrypt scan
 
-# Scan output formats
+# Scan output formats (values are redacted by default)
 superencrypt scan --table
 superencrypt scan --json
+superencrypt scan --table --show-values
 
 # Scan a single file
 superencrypt scan --file path/to/file
@@ -80,6 +81,12 @@ superencrypt decrypt --key "$SUPERENCRYPT_KEY"
 ```bash
 # Generate a key and write .superencrypt.key
 superencrypt encrypt
+
+# Print the generated key (use with care)
+superencrypt encrypt --print-key
+
+# Overwrite existing key file
+superencrypt encrypt --force
 
 # Use the key file to decrypt
 superencrypt decrypt --key-file .superencrypt.key

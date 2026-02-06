@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import List
@@ -12,6 +13,7 @@ from .transform import encrypt_file, decrypt_file
 
 
 DEFAULT_KEY_FILE = ".superencrypt.key"
+REDACTED_VALUE = "[REDACTED]"
 
 
 def _load_key_from_args(args: argparse.Namespace) -> bytes:
@@ -22,8 +24,17 @@ def _load_key_from_args(args: argparse.Namespace) -> bytes:
     raise SystemExit("Missing key: provide --key or --key-file")
 
 
-def _write_key_file(path: Path, key: bytes) -> None:
+def _write_key_file(path: Path, key: bytes, *, force: bool) -> None:
+    if path.exists() and not force:
+        raise SystemExit(f"Key file already exists: {path}. Use --force to overwrite.")
     path.write_bytes(key + b"\n")
+    os.chmod(path, 0o600)
+
+
+def _redact(value: str) -> str:
+    if len(value) <= 8:
+        return REDACTED_VALUE
+    return f"{value[:4]}...{value[-4:]}"
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
@@ -39,13 +50,14 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if not findings:
         print("No secrets found.")
         return 0
+    show_values = bool(args.show_values)
     if args.json:
         payload = [
             {
                 "file": str(finding.path.relative_to(root)),
                 "line": finding.line_number,
                 "type": finding.key or "secret",
-                "value": finding.value,
+                "value": finding.value if show_values else _redact(finding.value),
             }
             for finding in findings
         ]
@@ -57,7 +69,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
                 str(finding.path.relative_to(root)),
                 str(finding.line_number),
                 finding.key or "secret",
-                finding.value,
+                finding.value if show_values else _redact(finding.value),
             )
             for finding in findings
         ]
@@ -83,8 +95,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
     grouped: dict[str, list[tuple[int, str, str]]] = {}
     for finding in findings:
         rel = str(finding.path.relative_to(root))
+        display_value = finding.value if show_values else _redact(finding.value)
         grouped.setdefault(rel, []).append(
-            (finding.line_number, finding.key or "secret", finding.value)
+            (finding.line_number, finding.key or "secret", display_value)
         )
     for rel in sorted(grouped.keys()):
         print(rel)
@@ -100,8 +113,9 @@ def cmd_encrypt(args: argparse.Namespace) -> int:
         key = _load_key_from_args(args)
     else:
         key = Crypto.generate_key()
-        print(key.decode("utf-8"))
-        _write_key_file(Path(DEFAULT_KEY_FILE), key)
+        if args.print_key:
+            print(key.decode("utf-8"))
+        _write_key_file(Path(DEFAULT_KEY_FILE), key, force=args.force)
     crypto = Crypto(key)
 
     changed_files: List[Path] = []
@@ -150,12 +164,38 @@ def cmd_decrypt(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="superencrypt")
+    parser = argparse.ArgumentParser(
+        prog="superencrypt",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=(
+            "Common flags:\n"
+            "  --root ROOT           Root directory to scan\n"
+            "  --file FILE           Scan/encrypt/decrypt a single file\n"
+            "  --json                JSON output for scan\n"
+            "  --table               Table output for scan\n"
+            "  --show-values         Show raw values in scan output (unsafe)\n"
+            "\n"
+            "Encrypt flags:\n"
+            "  --key KEY             Base64 key string\n"
+            "  --key-file PATH       Path to key file\n"
+            "  --print-key           Print generated key to stdout\n"
+            "  --force               Overwrite existing key file\n"
+            "\n"
+            "Decrypt flags:\n"
+            "  --key KEY             Base64 key string\n"
+            "  --key-file PATH       Path to key file\n"
+        ),
+    )
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument("--root", default=".", help="Root directory to scan")
     parent.add_argument("--file", help="Scan/encrypt/decrypt a single file")
     parent.add_argument("--json", action="store_true", help="JSON output for scan")
     parent.add_argument("--table", action="store_true", help="Table output for scan")
+    parent.add_argument(
+        "--show-values",
+        action="store_true",
+        help="Show raw values in scan output (unsafe for logs)",
+    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -165,6 +205,16 @@ def build_parser() -> argparse.ArgumentParser:
     encrypt_parser = subparsers.add_parser("encrypt", help="Encrypt secrets in-place", parents=[parent])
     encrypt_parser.add_argument("--key", help="Base64 key string")
     encrypt_parser.add_argument("--key-file", help="Path to key file")
+    encrypt_parser.add_argument(
+        "--print-key",
+        action="store_true",
+        help="Print generated key to stdout",
+    )
+    encrypt_parser.add_argument(
+        "--force",
+        action="store_true",
+        help=f"Overwrite existing {DEFAULT_KEY_FILE}",
+    )
     encrypt_parser.set_defaults(func=cmd_encrypt)
 
     decrypt_parser = subparsers.add_parser("decrypt", help="Decrypt secrets in-place", parents=[parent])
